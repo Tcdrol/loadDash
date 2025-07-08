@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons as Icon } from '@expo/vector-icons';
 import { RootStackParamList, AuthStackParamList, MainTabParamList } from './types';
 
 // Import screens (we'll create these next)
@@ -50,7 +51,7 @@ function MainTabs() {
         options={{
           tabBarLabel: 'Add Loan',
           tabBarIcon: ({ color, size }) => (
-            <Icon name="plus-circle" size={size} color={color} />
+            <Icon name="add-circle-outline" size={size} color={color} />
           ),
         }}
       />
@@ -68,7 +69,7 @@ function MainTabs() {
         component={SettingsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Icon name="user" size={size} color={color} />
+            <Icon name="person-outline" size={size} color={color} />
           ),
         }}
       />
