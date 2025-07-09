@@ -1,43 +1,93 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  TextInput, 
+  Alert, 
+  KeyboardAvoidingView, 
+  Platform,
+  ActivityIndicator
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../navigation/types';
+import { RootStackParamList } from '@navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 
 type AddEditLoanScreenProps = NativeStackScreenProps<RootStackParamList, 'AddEditLoan'>;
 
 type LoanType = 'given' | 'taken';
 type Frequency = 'one-time' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
+interface LoanFormData {
+  name: string;
+  amount: string;
+  interestRate: string;
+  startDate: Date;
+  endDate: Date;
+  frequency: Frequency;
+  notes: string;
+}
+
 const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
   const isEdit = !!route.params?.loanId;
   
   // Form state
   const [loanType, setLoanType] = useState<LoanType>('given');
-  const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [interestRate, setInterestRate] = useState('');
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [frequency, setFrequency] = useState<Frequency>('monthly');
-  const [notes, setNotes] = useState('');
+  const [formData, setFormData] = useState<LoanFormData>({
+    name: '',
+    amount: '',
+    interestRate: '',
+    startDate: new Date(),
+    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)), // Default to 1 month from now
+    frequency: 'monthly',
+    notes: ''
+  });
   
   // UI state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof LoanFormData, string>>>({});
+
+  // Update form data
+  const updateFormData = (field: keyof LoanFormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error when field is updated
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof LoanFormData, string>> = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      newErrors.amount = 'Please enter a valid amount';
+    }
+    
+    if (formData.startDate > formData.endDate) {
+      newErrors.endDate = 'End date must be after start date';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSave = async () => {
-    if (!name.trim() || !amount) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
-
-    if (startDate > endDate) {
-      Alert.alert('Error', 'End date must be after start date');
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     try {
@@ -46,20 +96,24 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
       
       // Navigate back on success
       navigation.goBack();
+      
+      // Show success message
+      Alert.alert('Success', `Loan ${route.params?.loanId ? 'updated' : 'created'} successfully`);
     } catch (error) {
+      console.error('Save error:', error);
       Alert.alert('Error', 'Failed to save loan. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const calculateTotalAmount = () => {
-    if (!amount) return 'K0.00';
-    const principal = parseFloat(amount.replace(/[^0-9.]/g, ''));
-    const rate = parseFloat(interestRate) || 0;
+  const calculateTotalAmount = useCallback(() => {
+    if (!formData.amount) return 'K0.00';
+    const principal = parseFloat(formData.amount.replace(/[^0-9.]/g, '')) || 0;
+    const rate = parseFloat(formData.interestRate) || 0;
     const total = principal + (principal * rate) / 100;
-    return `K${total.toFixed(2)}`;
-  };
+    return `K${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }, [formData.amount, formData.interestRate]);
 
   return (
     <KeyboardAvoidingView 
@@ -71,7 +125,7 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
           {/* Header */}
           <View className="mb-6">
             <Text className="text-2xl font-bold text-gray-900">
-              {isEdit ? 'Edit Loan' : 'Add New Loan'}
+              {route.params?.loanId ? 'Edit Loan' : 'Add New Loan'}
             </Text>
             <Text className="text-gray-500 mt-1">
               {isEdit 
@@ -116,8 +170,8 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
             <TextInput
               className="bg-white border border-gray-300 rounded-lg p-3 text-base"
               placeholder={`Enter ${loanType === 'given' ? 'borrower\'s' : 'lender\'s'} name`}
-              value={name}
-              onChangeText={setName}
+              value={formData.name}
+              onChangeText={(text) => updateFormData('name', text)}
             />
           </View>
 
@@ -131,11 +185,11 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
               <TextInput
                 className="bg-white border border-gray-300 rounded-lg p-3 text-base pl-10"
                 placeholder="0.00"
-                value={amount}
+                value={formData.amount}
                 onChangeText={(text) => {
                   // Allow only numbers and one decimal point
                   if (/^\d*\.?\d*$/.test(text) || text === '') {
-                    setAmount(text);
+                    updateFormData('amount', text);
                   }
                 }}
                 keyboardType="decimal-pad"
@@ -153,16 +207,16 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
             <TextInput
               className="bg-white border border-gray-300 rounded-lg p-3 text-base"
               placeholder="0"
-              value={interestRate}
+              value={formData.interestRate}
               onChangeText={(text) => {
                 // Allow only numbers and one decimal point
                 if (/^\d*\.?\d*$/.test(text) || text === '') {
-                  setInterestRate(text);
+                  updateFormData('interestRate', text);
                 }
               }}
               keyboardType="decimal-pad"
             />
-            {interestRate && (
+            {formData.interestRate && (
               <Text className="text-xs text-gray-500 mt-1">
                 Total to be repaid: {calculateTotalAmount()}
               </Text>
@@ -177,17 +231,23 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
                 className="bg-white border border-gray-300 rounded-lg p-3"
                 onPress={() => setShowStartDatePicker(true)}
               >
-                <Text>{startDate.toLocaleDateString()}</Text>
+                <Text>{format(formData.startDate, 'MMM d, yyyy')}</Text>
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
-                  value={startDate}
+                  value={formData.startDate}
                   mode="date"
                   display="default"
                   onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
                     setShowStartDatePicker(false);
                     if (selectedDate) {
-                      setStartDate(selectedDate);
+                      updateFormData('startDate', selectedDate);
+                      // If the new start date is after end date, update end date
+                      if (selectedDate > formData.endDate) {
+                        const newEndDate = new Date(selectedDate);
+                        newEndDate.setMonth(newEndDate.getMonth() + 1);
+                        updateFormData('endDate', newEndDate);
+                      }
                     }
                   }}
                 />
@@ -199,18 +259,18 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
                 className="bg-white border border-gray-300 rounded-lg p-3"
                 onPress={() => setShowEndDatePicker(true)}
               >
-                <Text>{endDate.toLocaleDateString()}</Text>
+                <Text>{format(formData.endDate, 'MMM d, yyyy')}</Text>
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
-                  value={endDate}
+                  value={formData.endDate}
                   mode="date"
                   display="default"
-                  minimumDate={startDate}
+                  minimumDate={formData.startDate}
                   onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
                     setShowEndDatePicker(false);
                     if (selectedDate) {
-                      setEndDate(selectedDate);
+                      updateFormData('endDate', selectedDate);
                     }
                   }}
                 />
@@ -225,10 +285,10 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
               {['one-time', 'weekly', 'monthly', 'quarterly', 'yearly'].map((freq) => (
                 <TouchableOpacity
                   key={freq}
-                  className={`py-2 px-3 mr-2 mb-2 rounded-full ${frequency === freq ? 'bg-blue-100' : 'bg-gray-100'}`}
-                  onPress={() => setFrequency(freq as Frequency)}
+                  className={`py-2 px-3 mr-2 mb-2 rounded-full ${formData.frequency === freq ? 'bg-blue-100' : 'bg-gray-100'}`}
+                  onPress={() => updateFormData('frequency', freq as Frequency)}
                 >
-                  <Text className={`text-sm ${frequency === freq ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                  <Text className={`text-sm ${formData.frequency === freq ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
                     {freq.charAt(0).toUpperCase() + freq.slice(1).replace('-', ' ')}
                   </Text>
                 </TouchableOpacity>
@@ -245,8 +305,8 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
             <TextInput
               className="bg-white border border-gray-300 rounded-lg p-3 text-base h-24 textAlignVertical="
               placeholder="Add any additional notes"
-              value={notes}
-              onChangeText={setNotes}
+              value={formData.notes}
+              onChangeText={(text) => updateFormData('notes', text)}
               multiline
             />
           </View>
@@ -257,10 +317,27 @@ const AddEditLoanScreen = ({ route, navigation }: AddEditLoanScreenProps) => {
             onPress={handleSave}
             disabled={isLoading}
           >
-            <Text className="text-white text-center font-semibold text-lg">
-              {isLoading ? (isEdit ? 'Updating...' : 'Saving...') : (isEdit ? 'Update Loan' : 'Save Loan')}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="text-white text-center font-semibold text-lg">
+                {route.params?.loanId ? 'Update Loan' : 'Save Loan'}
+              </Text>
+            )}
           </TouchableOpacity>
+          
+          {/* Error messages */}
+          {Object.values(errors).some(error => error) && (
+            <View className="mt-4 p-3 bg-red-50 rounded-lg">
+              {Object.entries(errors).map(([field, message]) => 
+                message ? (
+                  <Text key={field} className="text-red-600 text-sm mb-1">
+                    • {message}
+                  </Text>
+                ) : null
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

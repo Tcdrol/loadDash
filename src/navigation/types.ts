@@ -2,7 +2,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   LoanDetails: { loanId: string };
-  AddEditLoan: { loanId?: string };
+  AddEditLoan: { loanId?: string } | undefined;
   RepaymentHistory: { loanId: string };
   Settings: undefined;
   Analytics: undefined;
@@ -19,5 +19,5 @@ export type MainTabParamList = {
   Loans: undefined;
   AddLoan: undefined;
   Analytics: undefined;
-  Profile: undefined;
+  Settings: undefined;
 };

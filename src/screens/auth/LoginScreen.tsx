@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Alert, 
+  KeyboardAvoidingView, 
+  Platform, 
+  StyleSheet 
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
@@ -35,16 +44,16 @@ const LoginScreen = () => {
 
   return (
     <KeyboardAvoidingView 
-      className="flex-1 bg-white"
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View className="flex-1 justify-center p-6">
-        <Text className="text-3xl font-bold text-center mb-8 text-gray-800">Welcome Back</Text>
+      <View style={styles.innerContainer}>
+        <Text style={styles.title}>Welcome Back</Text>
         
-        <View className="mb-4">
-          <Text className="text-sm font-medium text-gray-700 mb-1">Email or Phone</Text>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email or Phone</Text>
           <TextInput
-            className="border border-gray-300 rounded-lg p-3 text-base"
+            style={styles.input}
             placeholder="Enter your email or phone"
             value={email}
             onChangeText={setEmail}
@@ -53,42 +62,113 @@ const LoginScreen = () => {
           />
         </View>
 
-        <View className="mb-6">
-          <Text className="text-sm font-medium text-gray-700 mb-1">Password</Text>
+        <View style={styles.passwordContainer}>
+          <Text style={styles.label}>Password</Text>
           <TextInput
-            className="border border-gray-300 rounded-lg p-3 text-base"
+            style={styles.input}
             placeholder="Enter your password"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
           <TouchableOpacity 
-            className="mt-2"
+            style={styles.forgotPasswordButton}
             onPress={() => navigation.navigate('ForgotPassword')}
           >
-            <Text className="text-right text-blue-500">Forgot Password?</Text>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          className="bg-blue-500 py-3 rounded-lg mb-4"
+          style={styles.loginButton}
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text className="text-white text-center font-semibold text-lg">
+          <Text style={styles.buttonText}>
             {loading ? 'Signing in...' : 'Sign In'}
           </Text>
         </TouchableOpacity>
 
-        <View className="flex-row justify-center mt-4">
-          <Text className="text-gray-600">Don't have an account? </Text>
+        <View style={styles.signupContainer}>
+          <Text style={styles.signupText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text className="text-blue-500 font-semibold">Sign Up</Text>
+            <Text style={styles.signupLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  innerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 32,
+    color: '#1f2937',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  passwordContainer: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  forgotPasswordButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+  },
+  forgotPasswordText: {
+    color: '#3b82f6',
+    textAlign: 'right',
+  },
+  loginButton: {
+    backgroundColor: '#3b82f6',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  buttonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
+    fontSize: 18,
+  },
+  signupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  signupText: {
+    color: '#4b5563',
+  },
+  signupLink: {
+    color: '#3b82f6',
+    fontWeight: '600',
+  },
+});
 
 export default LoginScreen;
